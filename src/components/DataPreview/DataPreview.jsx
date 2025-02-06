@@ -5,8 +5,6 @@ import ColumnHeader from '../ColumnHeader/ColumnHeader';
 const DataPreview = ({
   data = [],
   handleSort,
-  selectedRows,
-  setSelectedRows,
   currentPage = 1,
   rowsPerPage = 10,
   sortedColumn,

@@ -6,22 +6,40 @@ const Footer = () => {
   const theme = useSelector((state) => state.theme.theme); // Get current theme from Redux
 
   return (
-    <div className={`py-8 mt-8 ${theme === "dark" ? "bg-gray-900 text-gray-300" : "bg-white text-gray-800"}`}>
+    <div
+      className={`py-8 mt-8 ${
+        theme === "dark" ? "bg-gray-900 text-gray-300" : "bg-white text-gray-800"
+      } shadow-xl border-t`}
+    >
       <footer className="container mx-auto px-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          
           {/* Logo Section (Text-based FilterXcel) */}
           <div>
             <Link
               to="/"
-              className={`text-emerald-400 text-3xl font-extrabold tracking-wide hover:text-emerald-300 ${theme === "dark" ? "text-emerald-300" : "text-emerald-600"}`}
+              className={`text-emerald-400 text-3xl font-extrabold tracking-wide hover:text-emerald-300 ${
+                theme === "dark" ? "text-emerald-300" : "text-emerald-600"
+              }`}
             >
               FilterXcel
             </Link>
-            <p className={`text-sm mb-3 ${theme === "dark" ? "text-gray-500" : "text-gray-600"}`}>© 2024–2025</p>
-            <p className={`text-sm ${theme === "dark" ? "text-gray-500" : "text-gray-600"}`}>
+            <p
+              className={`text-sm mb-3 ${
+                theme === "dark" ? "text-gray-500" : "text-gray-600"
+              }`}
+            >
+              © 2024–2025
+            </p>
+            <p
+              className={`text-sm ${
+                theme === "dark" ? "text-gray-500" : "text-gray-600"
+              }`}
+            >
               Designed and Developed by the{" "}
-              <Link to="/home" className="text-emerald-400 font-medium hover:underline">
+              <Link
+                to="/home"
+                className="text-emerald-400 font-medium hover:underline"
+              >
                 FilterXcel
               </Link>{" "}
               team.
@@ -30,7 +48,13 @@ const Footer = () => {
 
           {/* Product Features Section */}
           <div>
-            <h5 className={`text-lg font-semibold mb-4 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>Product Features</h5>
+            <h5
+              className={`text-lg font-semibold mb-4 ${
+                theme === "dark" ? "text-white" : "text-gray-800"
+              }`}
+            >
+              Product Features
+            </h5>
             <ul className="space-y-3">
               <li>
                 <Link to="#" className="text-sm hover:text-emerald-400">
@@ -57,7 +81,13 @@ const Footer = () => {
 
           {/* About Section */}
           <div>
-            <h5 className={`text-lg font-semibold mb-4 ${theme === "dark" ? "text-white" : "text-gray-800"}`}>About</h5>
+            <h5
+              className={`text-lg font-semibold mb-4 ${
+                theme === "dark" ? "text-white" : "text-gray-800"
+              }`}
+            >
+              About
+            </h5>
             <ul className="space-y-3">
               <li>
                 <Link to="/about" className="text-sm hover:text-emerald-400">
@@ -71,7 +101,10 @@ const Footer = () => {
               </li>
               <li className="text-sm">
                 <span className="font-semibold">Gmail:</span>{" "}
-                <a href="mailto:mithil@gmail.com" className="hover:text-emerald-400">
+                <a
+                  href="mailto:mithil@gmail.com"
+                  className="hover:text-emerald-400"
+                >
                   mithil@gmail.com
                 </a>
               </li>
@@ -83,7 +116,11 @@ const Footer = () => {
         </div>
 
         {/* Horizontal Line */}
-        <div className={`border-t mt-8 pt-4 text-center ${theme === "dark" ? "border-gray-700 text-gray-500" : "border-gray-300 text-gray-700"}`}>
+        <div
+          className={`border-t mt-8 pt-4 text-center ${
+            theme === "dark" ? "border-gray-700 text-gray-500" : "border-gray-300 text-gray-700"
+          }`}
+        >
           <p className="text-sm">
             Made with ❤️ by the FilterXcel team. All rights reserved.
           </p>
