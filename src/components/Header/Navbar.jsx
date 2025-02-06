@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { Menu, Filter, BarChart2, ChevronDown } from "lucide-react";
+import { Menu, Filter, BarChart2 } from "lucide-react";
 import ThemeToggle from "../Button/ThemeToggle";
 
 const Navbar = () => {
@@ -14,7 +14,6 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const navbarBgColor = theme === "dark" ? "bg-gray-800" : "bg-white";
-  const textColor = theme === "dark" ? "text-emerald-300" : "text-gray-900";
 
   // Close menu if click is outside
   useEffect(() => {
@@ -40,7 +39,9 @@ const Navbar = () => {
           <div className="flex-shrink-0">
             <Link
               to="/"
-              className={`${textColor} text-3xl font-extrabold tracking-wide hover:text-emerald-400`}
+              className={`text-emerald-400 text-3xl font-extrabold tracking-wide hover:text-emerald-300 ${
+                theme === "dark" ? "text-emerald-300" : "text-emerald-600"
+              }`}
             >
               FilterXcel
             </Link>
@@ -51,7 +52,13 @@ const Navbar = () => {
             <Link
               to="/"
               className={`${
-                isActive("/") ? "bg-gray-700 text-white" : "text-gray-300"
+                isActive("/")
+                  ? theme === "dark"
+                    ? "bg-gray-700 text-white"
+                    : "bg-gray-200 text-gray-900"
+                  : theme === "dark"
+                  ? "text-emerald-300"
+                  : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >
               Home
@@ -59,7 +66,13 @@ const Navbar = () => {
             <Link
               to="/about"
               className={`${
-                isActive("/about") ? "bg-gray-700 text-white" : "text-gray-300"
+                isActive("/about")
+                  ? theme === "dark"
+                    ? "bg-gray-700 text-white"
+                    : "bg-gray-200 text-gray-900"
+                  : theme === "dark"
+                  ? "text-emerald-300"
+                  : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >
               About Us
@@ -68,15 +81,21 @@ const Navbar = () => {
               to="/contact"
               className={`${
                 isActive("/contact")
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-300"
+                  ? theme === "dark"
+                    ? "bg-gray-700 text-white"
+                    : "bg-gray-200 text-gray-900"
+                  : theme === "dark"
+                  ? "text-emerald-300"
+                  : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >
               Contact
             </Link>
           </div>
 
-          <ThemeToggle />
+          <div className="p-2">
+            <ThemeToggle />
+          </div>
 
           {/* Right Side: Hamburger Menu (Mobile) */}
           <div className="flex items-center space-x-4">
@@ -88,7 +107,11 @@ const Navbar = () => {
                 aria-expanded={isMobileMenuOpen ? "true" : "false"}
                 aria-controls="mobile-menu"
                 className={`${
-                  isMobileMenuOpen ? "bg-gray-700 text-white" : "text-gray-300"
+                  isMobileMenuOpen
+                    ? "bg-gray-700 text-white"
+                    : theme === "dark"
+                    ? "text-white"
+                    : "text-black"
                 } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition ease-in-out duration-300`}
               >
                 <Menu className="h-5 w-5" />
@@ -98,9 +121,12 @@ const Navbar = () => {
               {isMobileMenuOpen && (
                 <div
                   ref={menuRef}
-                  className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 text-gray-900 dark:text-emerald-300 rounded-lg shadow-lg z-10"
+                  className={`absolute right-0 mt-2 w-48 rounded-lg shadow-lg z-10 ${
+                    theme === "dark"
+                      ? "bg-gray-800 text-emerald-300"
+                      : "bg-white text-gray-900"
+                  }`}
                 >
-                  {/* Dropdown options with icons and text */}
                   <Link
                     to="/filter"
                     className="block px-4 py-2 text-lg font-medium hover:bg-gray-700 hover:text-white"
