@@ -7,6 +7,7 @@ import InteractiveMap from "./InteractiveMap";
 const ContactUs = () => {
   const dispatch = useDispatch();
   const { formData, status } = useSelector((state) => state.contactForm);
+  const { theme } = useSelector((state) => state.theme); // Get current theme from Redux
   const [errors, setErrors] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
 
@@ -40,7 +41,7 @@ const ContactUs = () => {
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();c
+    e.preventDefault();
     if (!validInputs()) return;
 
     setLoading(true);
@@ -75,16 +76,31 @@ const ContactUs = () => {
   };
 
   return (
-    <section className="container mx-auto p-8">
+    <section
+      className={`container mx-auto p-8 ${
+        theme === "dark" ? "bg-gray-900 text-gray-300" : "bg-white text-gray-800"
+      }`}
+    >
       <div className="px-4">
-        <h2 className="text-3xl font-bold text-center mb-6">Contact Us</h2>
+        <h2
+          className={`text-3xl font-bold text-center mb-6 ${
+            theme === "dark" ? "text-white" : "text-gray-800"
+          }`}
+        >
+          Contact Us
+        </h2>
       </div>
 
       <div className="flex flex-col md:flex-row items-center gap-10">
         {/* Form Section */}
         <form onSubmit={handleSubmit} className="w-full md:w-1/2">
           <div className="mb-4">
-            <label htmlFor="name" className="block text-lg font-medium">
+            <label
+              htmlFor="name"
+              className={`block text-lg font-medium ${
+                theme === "dark" ? "text-gray-300" : "text-gray-800"
+              }`}
+            >
               Name
             </label>
             <input
@@ -103,7 +119,12 @@ const ContactUs = () => {
             )}
           </div>
           <div className="mb-4">
-            <label htmlFor="email" className="block text-lg font-medium">
+            <label
+              htmlFor="email"
+              className={`block text-lg font-medium ${
+                theme === "dark" ? "text-gray-300" : "text-gray-800"
+              }`}
+            >
               Email
             </label>
             <input
@@ -122,7 +143,12 @@ const ContactUs = () => {
             )}
           </div>
           <div className="mb-4">
-            <label htmlFor="message" className="block text-lg font-medium">
+            <label
+              htmlFor="message"
+              className={`block text-lg font-medium ${
+                theme === "dark" ? "text-gray-300" : "text-gray-800"
+              }`}
+            >
               Message
             </label>
             <textarea
@@ -189,15 +215,33 @@ const ContactUs = () => {
 
         {/* Contact Details Section */}
         <div className="w-full md:w-1/2">
-          <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
-          <p className="mb-2">
+          <h3
+            className={`text-xl font-semibold mb-4 ${
+              theme === "dark" ? "text-white" : "text-gray-800"
+            }`}
+          >
+            Contact Information
+          </h3>
+          <p
+            className={`mb-2 ${
+              theme === "dark" ? "text-gray-300" : "text-gray-800"
+            }`}
+          >
             Phone: {import.meta.env.VITE_CONTACT_PHONE || "+123 456 7890"}
           </p>
-          <p className="mb-2">
+          <p
+            className={`mb-2 ${
+              theme === "dark" ? "text-gray-300" : "text-gray-800"
+            }`}
+          >
             Email:{" "}
             {import.meta.env.VITE_CONTACT_EMAIL || "contact@yourwebsite.com"}
           </p>
-          <p className="mb-2">
+          <p
+            className={`mb-2 ${
+              theme === "dark" ? "text-gray-300" : "text-gray-800"
+            }`}
+          >
             Address:{" "}
             {import.meta.env.VITE_CONTACT_ADDRESS ||
               "123 Street, City, Country"}

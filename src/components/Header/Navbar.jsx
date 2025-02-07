@@ -13,7 +13,11 @@ const Navbar = () => {
 
   const isActive = (path) => location.pathname === path;
 
-  const navbarBgColor = theme === "dark" ? "bg-gray-800" : "bg-white";
+  const navbarBgColor =
+  theme === "dark"
+    ? "bg-gray-800 shadow-lg"
+    : "bg-gray-100 border-b border-gray-300 shadow-gray-400/40 shadow-md";
+
 
   // Close menu if click is outside
   useEffect(() => {
@@ -32,7 +36,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className={`${navbarBgColor} shadow-lg`}>
+    <nav className={`${navbarBgColor} shadow-lg fixed top-0 left-0 w-full z-50 h-16`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16 w-full">
           {/* Left Side: Logo */}

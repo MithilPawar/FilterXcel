@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux"; // Import useSelector for theme
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { useDropzone } from "react-dropzone";
@@ -13,19 +14,19 @@ import ChartSelector from "../components/Charts/ChartSelector.jsx";
 import Spinner from "../components/Spinner/Spinner.jsx";
 
 const Home = () => {
+  const theme = useSelector((state) => state.theme.theme); // Get theme from Redux
   const [file, setFile] = useState(null);
   const [fileInfo, setFileInfo] = useState(null);
   const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]); // Data after filtering
+  const [filteredData, setFilteredData] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRows, setSelectedRows] = useState(new Set());
   const [selectedColumn, setSelectedColumn] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [error, setError] = useState(null); // Error state
+  const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
-  // File drop handling
   const onDrop = (acceptedFiles) => {
     const uploadedFile = acceptedFiles[0];
 
@@ -34,23 +35,25 @@ const Home = () => {
       return;
     }
 
-    // Check file type using the mime type and extension
-    const fileType = uploadedFile.type;
-    const fileExtension = uploadedFile.name.split('.').pop().toLowerCase();
+    const allowedExtensions = ["xlsx", "xls", "csv"];
+    const allowedMimeTypes = [
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "text/csv",
+    ];
 
-    // Validate file mime type and extension for Excel (.xls, .xlsx) and CSV
-    if (
-      !(
-        (fileType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" && (fileExtension === "xlsx" || fileExtension === "xls")) || // Excel files
-        (fileType === "application/vnd.ms-excel" && fileExtension === "xls") || // Older Excel files (.xls)
-        (fileType === "text/csv" && fileExtension === "csv") // CSV files
-      )
-    ) {
-      setError("Invalid file type. Please upload an Excel (.xls, .xlsx) or CSV file.");
+    const fileExtension = uploadedFile.name.split(".").pop().toLowerCase();
+    const isExtensionValid = allowedExtensions.includes(fileExtension);
+    const isMimeTypeValid = allowedMimeTypes.includes(uploadedFile.type);
+
+    if (!isExtensionValid || !isMimeTypeValid) {
+      setError(
+        "Invalid file type. Please upload an Excel (.xls, .xlsx) or CSV file."
+      );
       return;
     }
 
-    setError(null); // Clear error if file is valid
+    setError(null);
     setFile(uploadedFile);
     setIsProcessing(true);
 
@@ -63,7 +66,6 @@ const Home = () => {
           columns: fileData[0] ? fileData[0].length : 0,
         });
         setData(fileData);
-        setFilteredData(fileData);
         setIsProcessing(false);
       })
       .catch(() => {
@@ -77,7 +79,10 @@ const Home = () => {
     accept: ".xlsx, .xls, .csv",
   });
 
-  // Apply search filtering
+  useEffect(() => {
+    setFilteredData(data);
+  }, [data]);
+
   useEffect(() => {
     if (!searchTerm) {
       setFilteredData(data);
@@ -94,21 +99,40 @@ const Home = () => {
     setFilteredData(searchedData);
   }, [searchTerm, data]);
 
-  // Function to update current page when pagination is triggered
   const handlePaginationChange = (page) => {
-    if (page < 1 || page > Math.ceil((filteredData.length - 1) / rowsPerPage))
-      return;
+    if (page < 1 || page > Math.ceil(filteredData.length / rowsPerPage)) return;
     setCurrentPage(page);
   };
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="container mx-auto p-8">
+      <div
+        className={`container mx-auto p-8 transition-colors duration-300 ${
+          theme === "dark"
+            ? "bg-gray-900 text-gray-300"
+            : "bg-white text-gray-900"
+        }`}
+      >
         <div className="text-center mt-6 mb-4">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Welcome to <span className="text-emerald-600">FilterXcel</span>
+          <h1
+            className={`text-3xl font-bold ${
+              theme === "dark" ? "text-white-400" : "text-gray-800"
+            }`}
+          >
+            Welcome to{" "}
+            <span
+              className={`${
+                theme === "dark" ? "text-emerald-300" : "text-emerald-600"
+              }`}
+            >
+              FilterXcel
+            </span>
           </h1>
-          <p className="text-lg mt-2 text-gray-600">
+          <p
+            className={`text-lg mt-2 ${
+              theme === "dark" ? "text-gray-400" : "text-gray-600"
+            }`}
+          >
             Upload your Excel or CSV file to begin analyzing your data.
           </p>
         </div>
@@ -122,11 +146,7 @@ const Home = () => {
         </div>
 
         {/* Error Message */}
-        {error && (
-          <div className="text-red-500 text-center mb-6">
-            {error}
-          </div>
-        )}
+        {error && <div className="text-red-500 text-center mb-6">{error}</div>}
 
         {/* File Info Display */}
         {file && !isProcessing && fileInfo && (
@@ -138,8 +158,7 @@ const Home = () => {
         {/* Processing Indicator */}
         {isProcessing && (
           <div className="mt-4 text-center text-gray-500">
-            <Spinner /> {/* Show spinner while processing */}
-            ⏳ Processing file...
+            <Spinner /> ⏳ Processing file...
           </div>
         )}
 
@@ -148,13 +167,10 @@ const Home = () => {
           <div className="mt-8">
             <h2 className="text-2xl font-semibold mb-4">Data Preview</h2>
 
-            {/* Search Bar */}
             <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
 
-            {/* Filtering Component */}
             <FilteringComponent data={data} setFilteredData={setFilteredData} />
 
-            {/* Data Table */}
             <DataPreview
               data={filteredData}
               selectedRows={selectedRows}
@@ -163,11 +179,10 @@ const Home = () => {
               rowsPerPage={rowsPerPage}
             />
 
-            {/* Pagination Controls */}
             <Pagination
               currentPage={currentPage}
               setCurrentPage={handlePaginationChange}
-              totalPages={Math.ceil((filteredData.length - 1) / rowsPerPage)}
+              totalPages={Math.ceil(filteredData.length / rowsPerPage)}
             />
           </div>
         )}
