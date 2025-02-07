@@ -1,28 +1,65 @@
-import React from 'react';
-import { Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import { PieChart as RechartsPieChart, Pie, Tooltip, Cell } from "recharts";
 
-// Register necessary chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#A28CF2", "#F45B69"];
 
 const PieChart = ({ data, column }) => {
-  const chartData = {
-    labels: [...new Set(data.map((row) => row[column]))], // Unique values from the selected column
-    datasets: [
-      {
-        data: [...new Set(data.map((row) => row[column]))].map(
-          (label) => data.filter((row) => row[column] === label).length
-        ), // Count occurrences of each unique value
-        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#FF9F40'],
-        hoverOffset: 4,
-      },
-    ],
-  };
+  if (!data || data.length < 2) return <p>No data available for Pie Chart</p>;
+
+  let chartData = [];
+
+  if (Array.isArray(data[0])) {
+    const columnIndex = data[0].indexOf(column);
+    if (columnIndex === -1) return <p>Column not found in data</p>;
+
+    const valueCounts = {};
+    for (let i = 1; i < data.length; i++) {
+      const value = data[i][columnIndex];
+      // Skip empty, null, or undefined values
+      if (value == null || value === "") continue;
+
+      valueCounts[value] = (valueCounts[value] || 0) + 1;
+    }
+
+    chartData = Object.keys(valueCounts).map((key, index) => ({
+      name: key,
+      value: valueCounts[key],
+      color: COLORS[index % COLORS.length]
+    }));
+  } else if (typeof data[0] === "object") {
+    const valueCounts = {};
+    data.forEach((row) => {
+      const value = row[column];
+      // Skip empty, null, or undefined values
+      if (value == null || value === "") return;
+
+      valueCounts[value] = (valueCounts[value] || 0) + 1;
+    });
+
+    chartData = Object.keys(valueCounts).map((key, index) => ({
+      name: key,
+      value: valueCounts[key],
+      color: COLORS[index % COLORS.length]
+    }));
+  }
 
   return (
-    <div>
-      <Pie data={chartData} />
-    </div>
+    <RechartsPieChart width={400} height={400}>
+      <Pie
+        data={chartData}
+        cx="50%"
+        cy="50%"
+        labelLine={false}
+        outerRadius={120}
+        fill="#8884d8"
+        dataKey="value"
+        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+      >
+        {chartData.map((entry, index) => (
+          <Cell key={`cell-${index}`} fill={entry.color} />
+        ))}
+      </Pie>
+      <Tooltip />
+    </RechartsPieChart>
   );
 };
 

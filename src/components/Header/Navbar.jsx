@@ -57,7 +57,7 @@ const Navbar = () => {
                     ? "bg-gray-700 text-white"
                     : "bg-gray-200 text-gray-900"
                   : theme === "dark"
-                  ? "text-emerald-300"
+                  ? "text-white"
                   : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >
@@ -71,7 +71,7 @@ const Navbar = () => {
                     ? "bg-gray-700 text-white"
                     : "bg-gray-200 text-gray-900"
                   : theme === "dark"
-                  ? "text-emerald-300"
+                  ? "text-white"
                   : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >
@@ -85,7 +85,7 @@ const Navbar = () => {
                     ? "bg-gray-700 text-white"
                     : "bg-gray-200 text-gray-900"
                   : theme === "dark"
-                  ? "text-emerald-300"
+                  ? "text-white"
                   : "text-gray-700"
               } text-lg font-medium hover:bg-gray-700 hover:text-white px-4 py-2 rounded-lg transition ease-in-out duration-300`}
             >

@@ -1,22 +1,19 @@
+// redux/slices/excelSlice.js
 import { createSlice } from "@reduxjs/toolkit";
+
+const initialState = {
+  isExcelImported: false,
+};
 
 const excelSlice = createSlice({
   name: "excel",
-  initialState: {
-    isImported: false,
-    fileData: [], // Add a field to store the data
-  },
+  initialState,
   reducers: {
-    setExelImported: (state, action) => {
-      state.isImported = true;
-      state.fileData = action.payload; // Store the file data (e.g., rows and columns)
-    },
-    resestExcelImported: (state) => {
-      state.isImported = false;
-      state.fileData = []; // Clear the data
+    setExcelImported: (state, action) => {
+      state.isExcelImported = action.payload;
     },
   },
 });
 
-export const { setExelImported, resestExcelImported } = excelSlice.actions;
+export const { setExcelImported } = excelSlice.actions;
 export default excelSlice.reducer;

@@ -1,30 +1,34 @@
-import React from 'react';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
-
-// Register necessary chart.js components
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
+import { BarChart as ReBarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const BarChart = ({ data, column }) => {
-  // Prepare the chart data
-  const chartData = {
-    labels: data.map((_, index) => `Row ${index + 1}`), // X-axis labels are row numbers
-    datasets: [
-      {
-        label: column, // The column header is used as the label for the dataset
-        data: data.map((row) => row[column]), // Y-axis values are from the selected column
-        backgroundColor: 'rgba(75, 192, 192, 0.2)', // Bar color
-        borderColor: 'rgba(75, 192, 192, 1)', // Bar border color
-        borderWidth: 1, // Bar border width
-      },
-    ],
-  };
+  if (!data || data.length <= 1) return <p>No data available for Bar Chart</p>;
+
+  // Get the column index
+  const columnIndex = data[0].indexOf(column);
+  if (columnIndex === -1) return <p>Column not found in data</p>;
+
+  // Process the data
+  const chartData = data.slice(1).map((row) => {
+    const value = row[columnIndex];
+    
+    // Check for valid numeric values and handle invalid ones
+    const numericValue = isNaN(value) || value == null || value === "" ? 0 : parseFloat(value);
+
+    return {
+      name: row[0],  // Assuming first column is the name
+      value: numericValue,
+    };
+  }).filter((row) => row.value !== 0);  // Optionally remove rows with zero values
 
   return (
-    <div>
-      <h3 className="text-xl font-semibold mb-4">{`Bar Chart for ${column}`}</h3>
-      <Bar data={chartData} />
-    </div>
+    <ResponsiveContainer width="100%" height={300}>
+      <ReBarChart data={chartData}>
+        <XAxis dataKey="name" />
+        <YAxis />
+        <Tooltip />
+        <Bar dataKey="value" fill="#0088FE" />
+      </ReBarChart>
+    </ResponsiveContainer>
   );
 };
 
