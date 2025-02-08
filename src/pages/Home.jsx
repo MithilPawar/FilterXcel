@@ -167,9 +167,9 @@ const Home = () => {
           <div className="mt-8">
             <h2 className="text-2xl font-semibold mb-4">Data Preview</h2>
 
-            <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+            <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} theme={theme} />
 
-            <FilteringComponent data={data} setFilteredData={setFilteredData} />
+            <FilteringComponent data={data} setFilteredData={setFilteredData} theme={theme} />
 
             <DataPreview
               data={filteredData}
