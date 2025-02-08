@@ -3,11 +3,14 @@ import emailjs from "emailjs-com";
 import { useSelector, useDispatch } from "react-redux";
 import { updateForm, resetForm, setStatus } from "../store/contactSlice";
 import InteractiveMap from "./InteractiveMap";
+import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt } from "react-icons/fa";
+import { motion } from "framer-motion";
+import { FaSpinner } from "react-icons/fa";
 
 const ContactUs = () => {
   const dispatch = useDispatch();
   const { formData, status } = useSelector((state) => state.contactForm);
-  const { theme } = useSelector((state) => state.theme); // Get current theme from Redux
+  const { theme } = useSelector((state) => state.theme);
   const [errors, setErrors] = useState({ name: "", email: "", message: "" });
   const [loading, setLoading] = useState(false);
 
@@ -19,10 +22,7 @@ const ContactUs = () => {
       newError.name = "Name is required";
       valid = false;
     }
-    if (
-      !formData.email.trim() ||
-      !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g.test(formData.email)
-    ) {
+    if (!formData.email.trim() || !/^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/g.test(formData.email)) {
       newError.email = "Valid email is required.";
       valid = false;
     }
@@ -59,198 +59,82 @@ const ContactUs = () => {
         },
         import.meta.env.VITE_EMAILJS_USER_ID
       )
-      .then((response) => {
-        console.log("Email sent successfully", response);
+      .then(() => {
         dispatch(setStatus("Message sent successfully!"));
         setLoading(false);
-
         setTimeout(() => {
           dispatch(resetForm());
         }, 2000);
       })
-      .catch((error) => {
-        console.error("Error sending email:", error);
+      .catch(() => {
         dispatch(setStatus("Failed to send message. Please try again later."));
-        setLoading(false); // Stop animation
+        setLoading(false);
       });
   };
 
   return (
-    <section
-      className={`container mx-auto p-8 ${
-        theme === "dark" ? "bg-gray-900 text-gray-300" : "bg-white text-gray-800"
-      }`}
-    >
-      <div className="px-4">
-        <h2
-          className={`text-3xl font-bold text-center mb-6 ${
-            theme === "dark" ? "text-white" : "text-gray-800"
-          }`}
-        >
-          Contact Us
-        </h2>
-      </div>
+    <section className={`container mx-auto px-6 py-10 ${theme === "dark" ? "bg-[#121212] text-gray-300" : "bg-white text-gray-800"}`}>
+      <motion.h2 
+        className="text-4xl font-bold text-center mb-8"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+      >
+        Get in Touch with Us
+      </motion.h2>
 
-      <div className="flex flex-col md:flex-row items-center gap-10">
-        {/* Form Section */}
-        <form onSubmit={handleSubmit} className="w-full md:w-1/2">
-          <div className="mb-4">
-            <label
-              htmlFor="name"
-              className={`block text-lg font-medium ${
-                theme === "dark" ? "text-gray-300" : "text-gray-800"
-              }`}
-            >
-              Name
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className={`w-full p-3 mt-2 rounded-md border ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } focus:ring-2 focus:ring-blue-500`}
-              required
-            />
-            {errors.name && (
-              <p className="text-red-500 mt-1 text-sm">{errors.name}</p>
-            )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {/* Contact Form */}
+        <motion.form 
+          onSubmit={handleSubmit}
+          className="w-full p-6 rounded-xl shadow-lg border border-gray-600 bg-opacity-10 backdrop-blur-lg"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          {/* Name Input */}
+          <div className="relative mb-4">
+            <input type="text" name="name" value={formData.name} onChange={handleChange} className={`peer w-full p-3 rounded-md border bg-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.name ? "border-red-500" : "border-gray-500"}`} required />
+            <label className="absolute left-3 top-3 text-gray-500 peer-focus:-top-2 peer-focus:text-sm peer-focus:text-blue-500 transition-all">Name</label>
+            {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
           </div>
-          <div className="mb-4">
-            <label
-              htmlFor="email"
-              className={`block text-lg font-medium ${
-                theme === "dark" ? "text-gray-300" : "text-gray-800"
-              }`}
-            >
-              Email
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full p-3 mt-2 rounded-md border ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              } focus:ring-2 focus:ring-blue-500`}
-              required
-            />
-            {errors.email && (
-              <p className="text-red-500 mt-1 text-sm">{errors.email}</p>
-            )}
+
+          {/* Email Input */}
+          <div className="relative mb-4">
+            <input type="email" name="email" value={formData.email} onChange={handleChange} className={`peer w-full p-3 rounded-md border bg-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.email ? "border-red-500" : "border-gray-500"}`} required />
+            <label className="absolute left-3 top-3 text-gray-500 peer-focus:-top-2 peer-focus:text-sm peer-focus:text-blue-500 transition-all">Email</label>
+            {errors.email && <p className="text-red-500 text-sm">{errors.email}</p>}
           </div>
-          <div className="mb-4">
-            <label
-              htmlFor="message"
-              className={`block text-lg font-medium ${
-                theme === "dark" ? "text-gray-300" : "text-gray-800"
-              }`}
-            >
-              Message
-            </label>
-            <textarea
-              id="message"
-              name="message"
-              value={formData.message}
-              onChange={handleChange}
-              rows="4"
-              className={`w-full p-3 mt-2 rounded-md border ${
-                errors.message ? "border-red-500" : "border-gray-300"
-              } focus:ring-2 focus:ring-blue-500`}
-              required
-            ></textarea>
-            {errors.message && (
-              <p className="text-red-500 mt-1 text-sm">{errors.message}</p>
-            )}
+
+          {/* Message Input */}
+          <div className="relative mb-4">
+            <textarea name="message" value={formData.message} onChange={handleChange} rows="4" className={`peer w-full p-3 rounded-md border bg-transparent focus:ring-2 focus:ring-blue-500 focus:outline-none ${errors.message ? "border-red-500" : "border-gray-500"}`} required></textarea>
+            <label className="absolute left-3 top-3 text-gray-500 peer-focus:-top-2 peer-focus:text-sm peer-focus:text-blue-500 transition-all">Message</label>
+            {errors.message && <p className="text-red-500 text-sm">{errors.message}</p>}
           </div>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white p-3 rounded-md hover:bg-blue-700 transition duration-300 flex items-center justify-center"
-            disabled={status === "Sending..."}
-          >
-            {loading ? (
-              <div className="flex items-center">
-                <svg
-                  className="animate-spin h-5 w-5 mr-3 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v4a4 4 0 100 8v4a8 8 0 01-8-8z"
-                  ></path>
-                </svg>
-                <p>Sending...</p>
-              </div>
-            ) : (
-              "Send"
-            )}
+
+          {/* Submit Button */}
+          <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-md hover:scale-105 transition duration-300 flex items-center justify-center" disabled={loading}>
+            {loading ? <FaSpinner className="animate-spin" /> : "Send"}
           </button>
 
-          {status && (
-            <p
-              className={`mt-4 text-center ${
-                status.includes("successfully")
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
-              {status}
-            </p>
-          )}
-        </form>
+          {/* Status Message */}
+          {status && <p className={`mt-4 text-center ${status.includes("successfully") ? "text-green-500" : "text-red-500"}`}>{status}</p>}
+        </motion.form>
 
-        {/* Contact Details Section */}
-        <div className="w-full md:w-1/2">
-          <h3
-            className={`text-xl font-semibold mb-4 ${
-              theme === "dark" ? "text-white" : "text-gray-800"
-            }`}
-          >
-            Contact Information
-          </h3>
-          <p
-            className={`mb-2 ${
-              theme === "dark" ? "text-gray-300" : "text-gray-800"
-            }`}
-          >
-            Phone: {import.meta.env.VITE_CONTACT_PHONE || "+123 456 7890"}
-          </p>
-          <p
-            className={`mb-2 ${
-              theme === "dark" ? "text-gray-300" : "text-gray-800"
-            }`}
-          >
-            Email:{" "}
-            {import.meta.env.VITE_CONTACT_EMAIL || "contact@yourwebsite.com"}
-          </p>
-          <p
-            className={`mb-2 ${
-              theme === "dark" ? "text-gray-300" : "text-gray-800"
-            }`}
-          >
-            Address:{" "}
-            {import.meta.env.VITE_CONTACT_ADDRESS ||
-              "123 Street, City, Country"}
-          </p>
+        {/* Contact Information */}
+        <motion.div 
+          className="w-full p-6 rounded-xl shadow-lg border border-gray-600 bg-opacity-10 backdrop-blur-lg"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
+          <p className="flex items-center gap-2 mb-2"><FaPhoneAlt /> <a href="tel:1234567890" className="hover:underline">123 456 7890</a></p>
+          <p className="flex items-center gap-2 mb-2"><FaEnvelope /> <a href="mailto:contact@yourwebsite.com" className="hover:underline">contact@yourwebsite.com</a></p>
+          <p className="flex items-center gap-2 mb-2"><FaMapMarkerAlt /> 123 Street, City, Country</p>
 
-          <div className="mt-6">
+          <div className="mt-6 opacity-0 animate-fadeIn">
             <InteractiveMap />
           </div>
-        </div>
+        </motion.div>
       </div>
     </section>
   );

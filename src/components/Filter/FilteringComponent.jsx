@@ -1,21 +1,13 @@
-import { useState, useEffect, useMemo } from "react";
-import debounce from "lodash.debounce";  // Importing debounce from lodash
+import { useState, useEffect, useCallback } from "react";
+import debounce from "lodash.debounce";
 
-const FilteringComponent = ({ data, setFilteredData }) => {
+const FilteringComponent = ({ data, setFilteredData, searchTerm, theme }) => {
   const [filters, setFilters] = useState([]);
   const [noResults, setNoResults] = useState(false);
-  const [hasFilters, setHasFilters] = useState(false);
-  const [debouncedFilters, setDebouncedFilters] = useState(filters);
   const conditions = ["equals", "contains", "greater", "less", "between"];
-  
-  // Debounced filter application
-  const applyFiltersDebounced = debounce(() => {
-    applyFilters();
-  }, 500);  // Waits 500ms after the user stops typing
 
   const addFilter = () => {
-    setFilters([...filters, { column: "", condition: "equals", value: "" }]);
-    setHasFilters(true);
+    setFilters([...filters, { column: "", condition: "equals", value: "", secondValue: "" }]);
   };
 
   const updateFilter = (index, key, value) => {
@@ -24,12 +16,21 @@ const FilteringComponent = ({ data, setFilteredData }) => {
     setFilters(newFilters);
   };
 
-  const applyFilters = () => {
-    let filtered = data.slice(1); // Exclude header row
-    let resultFound = false;
+  const parseDate = (dateStr) => {
+    const parts = dateStr.split("/");
+    if (parts.length === 3) {
+      const [day, month, year] = parts.map(Number);
+      return new Date(year, month - 1, day);
+    }
+    return new Date(dateStr);
+  };
 
-    filters.forEach(({ column, condition, value }) => {
+  const applyFilters = useCallback(() => {
+    let filtered = data.slice(1);
+
+    filters.forEach(({ column, condition, value, secondValue }) => {
       if (!column || value === "") return;
+
       filtered = filtered.filter((row) => {
         const cellValue = row[column]?.toString().toLowerCase();
         const filterValue = value.toLowerCase();
@@ -44,55 +45,55 @@ const FilteringComponent = ({ data, setFilteredData }) => {
           case "less":
             return parseFloat(cellValue) < parseFloat(value);
           case "between":
-            const [start, end] = value.split(",");
+            if (!secondValue) return false;
+            const [start, end] = [parseDate(value), parseDate(secondValue)];
             const cellDate = parseDate(cellValue);
-            return cellDate >= parseDate(start) && cellDate <= parseDate(end);
+            return cellDate >= start && cellDate <= end;
           default:
             return true;
         }
       });
     });
 
-    if (filtered.length > 0) {
-      setFilteredData([data[0], ...filtered]);
-      setNoResults(false);
-    } else {
-      setNoResults(true);
-      setFilteredData([data[0]]);
+    if (searchTerm) {
+      filtered = filtered.filter((row) =>
+        row.some((cell) => cell.toString().toLowerCase().includes(searchTerm.toLowerCase()))
+      );
     }
-  };
 
-  // Memoizing filtered data to avoid unnecessary calculations
-  const filteredData = useMemo(() => {
-    return filters.length ? applyFilters() : data;
-  }, [filters, data]);
+    setFilteredData(filtered.length > 0 ? [data[0], ...filtered] : [data[0]]);
+    setNoResults(filtered.length === 0);
+  }, [filters, searchTerm, data, setFilteredData]);
 
   useEffect(() => {
-    // Only apply filters after debouncing
-    setDebouncedFilters(filters);
-    applyFiltersDebounced();
-  }, [filters]); // Re-run the debounced filter function whenever filters change
+    const debouncedApply = debounce(applyFilters, 500);
+    debouncedApply();
+    return () => debouncedApply.cancel();
+  }, [applyFilters]);
 
   const resetFilters = () => {
     setFilters([]);
     setFilteredData(data);
-    setHasFilters(false);
     setNoResults(false);
   };
 
-  const parseDate = (dateStr) => {
-    const [day, month, year] = dateStr.split("/").map((item) => parseInt(item, 10));
-    return new Date(year, month - 1, day); // Convert to Date object
-  };
-
   return (
-    <div className="p-6 bg-white rounded-xl shadow-lg mb-8">
-      <h2 className="text-xl font-semibold mb-4 text-gray-800">🔍 Apply Filters</h2>
+    <div
+      className={`p-6 rounded-xl shadow-lg mb-8 transition ${
+        theme === "dark" ? "bg-gray-800 text-white" : "bg-white text-gray-900"
+      }`}
+    >
+      <h2 className="text-xl font-semibold mb-4">🔍 Apply Filters</h2>
 
       {filters.map((filter, index) => (
         <div key={index} className="flex gap-4 mb-4 items-center">
           <select
-            className="p-3 border border-gray-300 rounded-lg focus:outline-none"
+            className={`p-3 border rounded-lg transition ${
+              theme === "dark"
+                ? "border-gray-600 bg-gray-700 text-white"
+                : "border-gray-300 bg-white text-gray-900"
+            }`}
+            value={filter.column}
             onChange={(e) => updateFilter(index, "column", e.target.value)}
           >
             <option value="">Select Column</option>
@@ -104,7 +105,12 @@ const FilteringComponent = ({ data, setFilteredData }) => {
           </select>
 
           <select
-            className="p-3 border border-gray-300 rounded-lg focus:outline-none"
+            className={`p-3 border rounded-lg transition ${
+              theme === "dark"
+                ? "border-gray-600 bg-gray-700 text-white"
+                : "border-gray-300 bg-white text-gray-900"
+            }`}
+            value={filter.condition}
             onChange={(e) => updateFilter(index, "condition", e.target.value)}
           >
             {conditions.map((cond, i) => (
@@ -116,32 +122,65 @@ const FilteringComponent = ({ data, setFilteredData }) => {
 
           <input
             type="text"
-            className="p-3 border border-gray-300 rounded-lg focus:outline-none"
+            className={`p-3 border rounded-lg transition ${
+              theme === "dark"
+                ? "border-gray-600 bg-gray-700 text-white"
+                : "border-gray-300 bg-white text-gray-900"
+            }`}
             placeholder="Enter value"
+            value={filter.value}
             onChange={(e) => updateFilter(index, "value", e.target.value)}
           />
+
+          {filter.condition === "between" && (
+            <input
+              type="text"
+              className={`p-3 border rounded-lg transition ${
+                theme === "dark"
+                  ? "border-gray-600 bg-gray-700 text-white"
+                  : "border-gray-300 bg-white text-gray-900"
+              }`}
+              placeholder="Enter second value"
+              value={filter.secondValue}
+              onChange={(e) => updateFilter(index, "secondValue", e.target.value)}
+            />
+          )}
         </div>
       ))}
 
       <div className="flex gap-6 mb-4">
-        <button
-          className="bg-green-600 text-white px-6 py-3 rounded-lg"
-          onClick={applyFilters}
-          style={{ display: hasFilters ? "block" : "none" }}
-        >
-          ✅ Apply Filters
-        </button>
+        {filters.length > 0 && (
+          <>
+            <button
+              className={`px-6 py-3 rounded-lg transition ${
+                theme === "dark"
+                  ? "bg-green-500 text-white hover:bg-green-400"
+                  : "bg-green-600 text-white hover:bg-green-500"
+              }`}
+              onClick={applyFilters}
+            >
+              ✅ Apply Filters
+            </button>
+
+            <button
+              className={`px-6 py-3 rounded-lg transition ${
+                theme === "dark"
+                  ? "bg-blue-500 text-white hover:bg-blue-400"
+                  : "bg-blue-600 text-white hover:bg-blue-500"
+              }`}
+              onClick={resetFilters}
+            >
+              🔄 Reset Filters
+            </button>
+          </>
+        )}
 
         <button
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg"
-          onClick={resetFilters}
-          style={{ display: hasFilters ? "block" : "none" }}
-        >
-          🔄 Reset Filters
-        </button>
-
-        <button
-          className="bg-yellow-500 text-white px-6 py-3 rounded-lg"
+          className={`px-6 py-3 rounded-lg transition ${
+            theme === "dark"
+              ? "bg-yellow-500 text-white hover:bg-yellow-400"
+              : "bg-yellow-500 text-white hover:bg-yellow-600"
+          }`}
           onClick={addFilter}
         >
           ➕ Add Filter
@@ -149,8 +188,12 @@ const FilteringComponent = ({ data, setFilteredData }) => {
       </div>
 
       {noResults && (
-        <p className="mt-4 text-red-600 font-semibold text-lg">
-          😔 No results found for the applied filters.
+        <p
+          className={`mt-4 font-semibold text-lg transition ${
+            theme === "dark" ? "text-red-400" : "text-red-600"
+          }`}
+        >
+          😔 No results found.
         </p>
       )}
     </div>
