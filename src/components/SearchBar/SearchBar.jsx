@@ -30,7 +30,7 @@ const SearchBar = ({ searchTerm, setSearchTerm, onSearch, theme }) => {
       <div className="relative">
         <input
           type="text"
-          placeholder="🔍 Search..."
+          placeholder="Search..."
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}

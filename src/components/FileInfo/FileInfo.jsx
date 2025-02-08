@@ -8,7 +8,7 @@ const FileInfo = ({ fileInfo }) => {
 
   return (
     <div
-      className={`mt-6 shadow-lg rounded-lg p-4 flex items-center justify-between transition-all hover:shadow-xl hover:scale-105 border-t-4 
+      className={`mt-6 shadow-lg rounded-lg p-4 flex items-center justify-between transition-all border-t-4 
       ${
         theme === "dark"
           ? "bg-gray-800 border-blue-400 text-gray-200"
