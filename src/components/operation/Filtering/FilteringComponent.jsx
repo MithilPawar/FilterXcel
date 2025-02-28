@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useDispatch, useSelector, shallowEqual } from "react-redux";
+import { useRef } from "react";
+import { useMemo } from "react";
 import {
   addFilter,
   removeFilter,
@@ -9,6 +11,7 @@ import DataTable from "../../DataTable/DataTable";
 
 const FilteringComponent = () => {
   const dispatch = useDispatch();
+  const inputRef = useRef(null);
 
   const filteredData = useSelector(
     (state) => state.file.filteredData,
@@ -16,14 +19,16 @@ const FilteringComponent = () => {
   );
   const filters = useSelector((state) => state.file.filters, shallowEqual);
 
-  const columns =
-    filteredData.length > 0 && typeof filteredData[0] === "object"
-      ? Object.keys(filteredData[0]).filter((col) => isNaN(col))
-      : [];
+  const columns = useMemo(() => {
+    if (filteredData.length > 0 && typeof filteredData[0] === "object") {
+      return Object.keys(filteredData[0]).filter((col) => isNaN(col));
+    }
+    return [];
+  }, [filteredData]);
 
   const [filter, setFilter] = useState({
     column: "",
-    condition: "equals",
+    condition: "",
     value: "",
     minValue: "",
     maxValue: "",
@@ -48,18 +53,39 @@ const FilteringComponent = () => {
           : { ...filter, value: filter.value };
 
       if (
-        (filter.condition === "between" && filter.minValue && filter.maxValue) ||
+        (filter.condition === "between" &&
+          filter.minValue &&
+          filter.maxValue) ||
         (filter.condition !== "between" && filter.value)
       ) {
         dispatch(addFilter(filterToAdd));
-        setFilter({ column: "", condition: "equals", value: "", minValue: "", maxValue: "" });
+        setFilter({
+          column: "",
+          condition: "",
+          value: "",
+          minValue: "",
+          maxValue: "",
+        });
       }
     }
   }, [dispatch, filter]);
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
-    setFilter((prev) => ({ ...prev, [name]: value }));
+
+    setFilter((prev) => {
+      let updatedFilter = { ...prev, [name]: value };
+
+      if (name === "column") {
+        updatedFilter.condition = "equals";
+      }
+
+      return updatedFilter;
+    });
+
+    if (name === "condition" && inputRef.current) {
+      setTimeout(() => inputRef.current.focus(), 100);
+    }
   }, []);
 
   return (
@@ -85,8 +111,12 @@ const FilteringComponent = () => {
           name="condition"
           value={filter.condition}
           onChange={handleInputChange}
-          className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
+          disabled={!filter.column}
+          className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400 disabled:bg-gray-200 disabled:cursor-not-allowed"
         >
+          <option value="" disabled>
+            Select Operation
+          </option>
           <option value="equals">Equals</option>
           <option value="doesNotEqual">Does Not Equal</option>
           <option value="contains">Contains</option>
@@ -124,6 +154,7 @@ const FilteringComponent = () => {
             type="text"
             name="value"
             placeholder="Enter value"
+            ref={inputRef}
             value={filter.value}
             onChange={handleInputChange}
             className="border p-2 rounded w-full focus:ring-2 focus:ring-blue-400"
@@ -132,18 +163,14 @@ const FilteringComponent = () => {
 
         <button
           onClick={handleAddFilter}
-          className={`bg-blue-500 text-white p-2 rounded transition-all ${
-            !filter.column ||
-            (!filter.value &&
-              !(filter.condition === "between" && filter.minValue && filter.maxValue))
+          disabled={
+            !filter.column || (!filter.value && filter.condition !== "between")
+          }
+          className={`bg-blue-500 text-white p-2 rounded ${
+            !filter.column || (!filter.value && filter.condition !== "between")
               ? "opacity-50 cursor-not-allowed"
               : "hover:bg-blue-600"
           }`}
-          disabled={
-            !filter.column ||
-            (!filter.value &&
-              !(filter.condition === "between" && filter.minValue && filter.maxValue))
-          }
         >
           ➕ Add Filter
         </button>
@@ -177,8 +204,16 @@ const FilteringComponent = () => {
       )}
 
       <div className="mt-6">
-        <h3 className="text-lg font-semibold mb-3 text-gray-800">Filtered Data</h3>
-        <DataTable data={filteredData} />
+        <h3 className="text-lg font-semibold mb-3 text-gray-800">
+          Filtered Data
+        </h3>
+        {filteredData.length === 0 ? (
+          <p className="text-gray-600 mt-4 text-center">
+            No results found. Try modifying your filters.
+          </p>
+        ) : (
+          <DataTable data={filteredData} />
+        )}
       </div>
     </div>
   );

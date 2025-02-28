@@ -11,7 +11,6 @@ const initialState = {
   fileInfo: null,
 };
 
-// Load persisted filters and fileData from localStorage
 const persistedFilters = JSON.parse(localStorage.getItem("filters")) || [];
 const persistedFileData = JSON.parse(localStorage.getItem("fileData")) || [];
 
@@ -32,36 +31,53 @@ const fileSlice = createSlice({
       };
     },
     setData: (state, action) => {
-      state.originalData = action.payload;
-      state.filteredData = [...action.payload];
-      state.fileInfo = null;
-      if (action.payload.length > 0) {
-        localStorage.setItem("fileData", JSON.stringify(action.payload));
+      try {
+        state.originalData = action.payload;
+        state.filteredData = [...action.payload];
+        state.fileInfo = null;
+        if (action.payload.length > 0) {
+          localStorage.setItem("fileData", JSON.stringify(action.payload));
+        }
+      } catch (error) {
+        console.error("Error setting data:", error);
+        state.error = "Failed to set data";
       }
     },
     addFilter: (state, action) => {
-      const existingFilter = state.filters.find(
-        (f) =>
-          f.column === action.payload.column &&
-          f.condition === action.payload.condition &&
-          f.value === action.payload.value
-      );
+      try {
+        const existingFilter = state.filters.find(
+          (f) =>
+            f.column === action.payload.column &&
+            f.condition === action.payload.condition &&
+            f.value === action.payload.value
+        );
 
-      if (!existingFilter) {
-        state.filters.push(action.payload);
-        state.filteredData = applyFilters(state.originalData, state.filters);
-        localStorage.setItem("filters", JSON.stringify(state.filters));
+        if (!existingFilter) {
+          state.filters.push(action.payload);
+          state.filteredData = applyFilters(state.originalData, state.filters);
+          localStorage.setItem("filters", JSON.stringify(state.filters));
+        }
+      } catch (error) {
+        console.error("Error adding filter:", error);
+        state.error = "Failed to add filter";
       }
     },
     removeFilter: (state, action) => {
-      state.filters = state.filters.filter(
-        (f) =>
-          !(f.column === action.payload.column &&
-            f.condition === action.payload.condition &&
-            f.value === action.payload.value)
-      );
-      state.filteredData = applyFilters(state.originalData, state.filters);
-      localStorage.setItem("filters", JSON.stringify(state.filters));
+      try {
+        state.filters = state.filters.filter(
+          (f) =>
+            !(
+              f.column === action.payload.column &&
+              f.condition === action.payload.condition &&
+              f.value === action.payload.value
+            )
+        );
+        state.filteredData = applyFilters(state.originalData, state.filters);
+        localStorage.setItem("filters", JSON.stringify(state.filters));
+      } catch (error) {
+        console.error("Error removing filter:", error);
+        state.error = "Failed to remove filter";
+      }
     },
     resetFilters: (state) => {
       state.filters = [];
@@ -69,8 +85,13 @@ const fileSlice = createSlice({
       localStorage.removeItem("filters");
     },
     resetData: (state) => {
-      Object.assign(state, initialState);
-      localStorage.clear();
+      try {
+        Object.assign(state, initialState);
+        localStorage.clear();
+      } catch (error) {
+        console.error("Error resetting data:", error);
+        state.error = "Failed to reset data";
+      }
     },
     setLoading: (state, action) => {
       state.loading = action.payload;
