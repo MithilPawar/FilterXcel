@@ -12,7 +12,6 @@ import {
   clearOriginalFileData,
   clearFilteredFileData,
   setFileMetadata,
-  setOriginalFileData,
 } from "../redux/slices/fileslice";
 
 const HomePage = () => {
@@ -25,10 +24,8 @@ const HomePage = () => {
   const fileMetadata = useSelector((state) => state.file.fileMetadata);
   const originalFileData = useSelector((state) => state.file.originalFileData);
 
-  const handleFileUploadSuccess = async (file) => {
-    dispatch(setFileMetadata(file));
-    const fileContent = await parseFile(file);
-    dispatch(setOriginalFileData(fileContent));
+  const handleFileUploadSuccess = (metadata) => {
+    dispatch(setFileMetadata(metadata));
   };
 
   const handleClearFile = () => {
@@ -40,7 +37,7 @@ const HomePage = () => {
   useEffect(() => {
     const loadRecentFiles = async () => {
       try {
-        const response = await fetchRecentFiles(profile._id);
+        const response = await fetchRecentFiles();
         setRecentFiles(response);
       } catch (error) {
         console.error("Error fetching recent files:", error);

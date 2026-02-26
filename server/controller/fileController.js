@@ -2,7 +2,7 @@ import File from "../models/File.js";
 
 export const getRecentFilesByUser = async (req, res) => {
     try {
-      const userId = req.params.userId;
+      const userId = req.user.userId;
   
       const recentFiles = await File.find({ userId })
         .sort({ uploadedAt: -1 })

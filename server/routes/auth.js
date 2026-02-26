@@ -5,6 +5,32 @@ import User from "../models/User.js";
 import authMiddleware from "../middleware/authMiddleware.js";
 
 const router = express.Router();
+const isProduction = process.env.NODE_ENV === "production";
+const expiryToMilliseconds = (expiry) => {
+  if (!expiry || typeof expiry !== "string") return 24 * 60 * 60 * 1000;
+
+  const match = expiry.trim().match(/^(\d+)([smhd])$/i);
+  if (!match) return 24 * 60 * 60 * 1000;
+
+  const value = Number(match[1]);
+  const unit = match[2].toLowerCase();
+  const multiplier = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  return value * multiplier[unit];
+};
+
+const tokenExpiry = process.env.JWT_SECRET_EXPIRY || "1d";
+const cookieOptions = {
+  httpOnly: true,
+  secure: isProduction,
+  sameSite: isProduction ? "none" : "lax",
+  maxAge: expiryToMilliseconds(tokenExpiry),
+};
 
 // SIGNUP
 router.post("/signup", async (req, res) => {
@@ -59,15 +85,10 @@ router.post("/login", async (req, res) => {
     const accessToken = jwt.sign(
       { userId: user._id },
       process.env.JWT_SECRET_TOKEN,
-      { expiresIn: process.env.JWT_SECRET_EXPIRY }
+      { expiresIn: tokenExpiry }
     );
 
-    res.cookie("token", accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "Strict",
-      maxAge: 15 * 60 * 1000,
-    });
+    res.cookie("token", accessToken, cookieOptions);
 
     res.status(200).json({ message: "Login successful" });
   } catch (error) {
@@ -78,8 +99,9 @@ router.post("/login", async (req, res) => {
 // LOGOUT
 router.post("/logout", (req, res) => {
   res.clearCookie("token", {
-    httpOnly: true,
-    secure: false,
+    httpOnly: cookieOptions.httpOnly,
+    secure: cookieOptions.secure,
+    sameSite: cookieOptions.sameSite,
   });
 
   res.status(200).json({ message: "Logged out successfully" });

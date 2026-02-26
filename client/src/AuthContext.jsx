@@ -24,12 +24,18 @@ export const AuthProvider = ({ children }) => {
     setIsProfileLoading(true);
     try {
       const res = await checkAuth();
-      setUser(res.user);
-      setIsAuthenticated(true);
-      setIsError(false);
+      if (res.isAuthenticated) {
+        setUser(res.user);
+        setIsAuthenticated(true);
+        setIsError(false);
 
-      const profileRes = await getUser();
-      setProfile(profileRes.user);
+        const profileRes = await getUser();
+        setProfile(profileRes.user);
+      } else {
+        setUser(null);
+        setProfile(null);
+        setIsAuthenticated(false);
+      }
     } catch (err) {
       console.error("Auth/Profile fetch failed:", err);
       setUser(null);

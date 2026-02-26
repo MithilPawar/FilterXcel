@@ -31,40 +31,43 @@ const FileUpload = ({ onUploadSuccess }) => {
     dispatch(setError(null));
 
     try {
-      const reader = new FileReader();
-      reader.onload = async (event) => {
-        const data = new Uint8Array(event.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const fileBuffer = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (event) => resolve(event.target.result);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsArrayBuffer(file);
+      });
 
-        dispatch(setOriginalFileData(jsonData));
-        dispatch(setFilteredFileData(jsonData));
+      const data = new Uint8Array(fileBuffer);
+      const workbook = XLSX.read(data, { type: "array" });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-        const response = await uploadUserFile(file);
-        const { fileId } = response.data;
+      dispatch(setOriginalFileData(jsonData));
+      dispatch(setFilteredFileData(jsonData));
 
-        const metadata = await getFileMetadata(fileId);
-        dispatch(setFileMetadata(metadata));
-        onUploadSuccess(metadata);
+      const response = await uploadUserFile(file);
+      if (!response.success || !response.data?.fileId) {
+        throw new Error(response.message || "File upload failed");
+      }
 
-        setSuccessMessage("File uploaded and data loaded successfully!");
+      const metadata = await getFileMetadata(response.data.fileId);
+      dispatch(setFileMetadata(metadata));
+      onUploadSuccess(metadata);
 
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSuccessMessage("");
-        }, 3000); // 3 seconds delay
-      };
+      setSuccessMessage("File uploaded and data loaded successfully!");
 
-      reader.readAsArrayBuffer(file);
+      setTimeout(() => {
+        setSuccessMessage("");
+      }, 3000);
     } catch (err) {
       const errMsg = err.message || "Upload failed";
       setErrorMsg(errMsg);
       dispatch(setError(errMsg));
+    } finally {
+      setUploading(false);
+      dispatch(setLoading(false));
     }
-
-    setUploading(false);
-    dispatch(setLoading(false));
   }, [dispatch, onUploadSuccess]);
 
   const { getRootProps, getInputProps } = useDropzone({

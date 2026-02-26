@@ -6,7 +6,7 @@ import {
 } from "./redux/slices/fileslice";
 
 const API = axios.create({
-  baseURL: "http://localhost:5000/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api",
   withCredentials: true,
 });
 
@@ -79,8 +79,18 @@ export const uploadUserFile = async (file) => {
 
 export const getFileById = async (fileId) => {
   try {
-    const res = await API.get(`/files/${fileId}`, { responseType: "blob" });
-    return res.data;
+    const res = await API.get(`/files/download/${fileId}`);
+    const { filename, contentType, buffer } = res.data.file;
+
+    const byteCharacters = atob(buffer);
+    const byteNumbers = new Array(byteCharacters.length)
+      .fill(0)
+      .map((_, index) => byteCharacters.charCodeAt(index));
+
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: contentType });
+
+    return { blob, filename, contentType };
   } catch (err) {
     handleError(err, "File retrieval failed");
   }
@@ -132,9 +142,9 @@ export const updateUser = async (data) => {
 };
 
 // getting recent file uploaded by user
-export const fetchRecentFiles = async (userId) => {
+export const fetchRecentFiles = async () => {
   try {
-    const response = await API.get(`/recent/${userId}`);
+    const response = await API.get(`/recent`);
     return response.data;
   } catch (err) {
     handleError(err, "Failed to fetch recent files");

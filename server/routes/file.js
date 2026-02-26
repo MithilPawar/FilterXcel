@@ -13,9 +13,23 @@ const router = express.Router();
 
 const conn = mongoose.connection;
 
-// ✅ Use `multer` with `memoryStorage` (GridFS needs Buffer data)
 const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const allowedMimeTypes = [
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "application/vnd.ms-excel",
+  "text/csv",
+];
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      return cb(new Error("Only Excel or CSV files are allowed"));
+    }
+    cb(null, true);
+  },
+});
 
 // ✅ Upload File Route (Manually Handling GridFS)
 router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
@@ -74,13 +88,26 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
   }
 });
 
-router.get("/files/:fileId", async (req, res) => {
+router.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+    return res.status(400).json({ success: false, message: "File too large. Max size is 10MB" });
+  }
+  if (err?.message === "Only Excel or CSV files are allowed") {
+    return res.status(400).json({ success: false, message: err.message });
+  }
+  return next(err);
+});
+
+router.get("/files/:fileId", verifyToken, async (req, res) => {
   try {
     const file = await File.findById(req.params.fileId);
     if (!file) {
       return res
         .status(404)
         .json({ success: false, message: "File not found" });
+    }
+    if (file.userId?.toString() !== req.user.userId) {
+      return res.status(403).json({ success: false, message: "Access denied" });
     }
     res.json({ success: true, file });
   } catch (error) {
@@ -89,13 +116,48 @@ router.get("/files/:fileId", async (req, res) => {
   }
 });
 
+router.delete("/files/:fileId", verifyToken, async (req, res) => {
+  try {
+    const metadata = await File.findById(req.params.fileId);
+    if (!metadata) {
+      return res.status(404).json({ success: false, message: "File not found" });
+    }
+
+    if (metadata.userId?.toString() !== req.user.userId) {
+      return res.status(403).json({ success: false, message: "Access denied" });
+    }
+
+    const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
+      bucketName: "uploads",
+    });
+
+    try {
+      await bucket.delete(metadata.fileId);
+    } catch (error) {
+      if (error?.message && !error.message.includes("FileNotFound")) {
+        throw error;
+      }
+    }
+
+    await File.findByIdAndDelete(req.params.fileId);
+
+    return res.json({ success: true, message: "File deleted successfully" });
+  } catch (error) {
+    console.error("File Deletion Error:", error);
+    return res.status(500).json({ success: false, message: "Error deleting file" });
+  }
+});
+
 // ✅ Get File Metadata by ID
-router.get("/metadata/:fileId", async (req, res) => {
+router.get("/metadata/:fileId", verifyToken, async (req, res) => {
   try {
     const file = await File.findById(req.params.fileId); 
 
     if (!file) {
       return res.status(404).json({ message: "File metadata not found" });
+    }
+    if (file.userId?.toString() !== req.user.userId) {
+      return res.status(403).json({ message: "Access denied" });
     }
 
     res.json(file);
@@ -105,15 +167,18 @@ router.get("/metadata/:fileId", async (req, res) => {
 });
 
 // getting recent file of user
-router.get("/recent/:userId", getRecentFilesByUser);
+router.get("/recent", verifyToken, getRecentFilesByUser);
 
 
-router.get("/files/download/:fileId", async (req, res) => {
+router.get("/files/download/:fileId", verifyToken, async (req, res) => {
   try {
     console.log("FileId requested:", req.params.fileId);
     const metadata = await File.findById(req.params.fileId);
     
     if (!metadata) return res.status(404).json({ message: "File not found" });
+    if (metadata.userId?.toString() !== req.user.userId) {
+      return res.status(403).json({ message: "Access denied" });
+    }
 
     const bucket = new mongoose.mongo.GridFSBucket(mongoose.connection.db, {
       bucketName: "uploads",

@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import {
   BrowserRouter as Router,
   Route,
@@ -5,19 +6,21 @@ import {
   Navigate,
   Outlet,
 } from "react-router-dom";
-import Signup from "./pages/SignUp";
-import Login from "./pages/Login";
-import Home from "./pages/HomePage";
-import Layout from "./components/Layout/Layout";
-import AboutUs from "./pages/AboutUs";
-import Landing from "./pages/Landing";
-import ProfilePage from "./pages/ProfilePage";
-import FilteringPage from "./pages/FilteringPage";
-import BasicOperationsPage from "./pages/BasicOperationsPage";
-import SummaryPage from "./pages/SummaryPage";
-import ChartsPage from "./pages/ChartsPage";
 import { useAuth } from "./AuthContext";
-import DataCleaningPage from "./pages/DataCleaningPage";
+
+const Signup = lazy(() => import("./pages/SignUp"));
+const Login = lazy(() => import("./pages/Login"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const Home = lazy(() => import("./pages/HomePage"));
+const Layout = lazy(() => import("./components/Layout/Layout"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const Landing = lazy(() => import("./pages/Landing"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
+const FilteringPage = lazy(() => import("./pages/FilteringPage"));
+const BasicOperationsPage = lazy(() => import("./pages/BasicOperationsPage"));
+const SummaryPage = lazy(() => import("./pages/SummaryPage"));
+const ChartsPage = lazy(() => import("./pages/ChartsPage"));
+const DataCleaningPage = lazy(() => import("./pages/DataCleaningPage"));
 
 const ProtectedRoute = () => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -41,26 +44,33 @@ const ProtectedRoute = () => {
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* Public Pages */}
-        <Route path="/" element={<Landing />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login />} />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+            <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }
+      >
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
-        {/* Protected Routes */}
-        <Route element={<ProtectedRoute />}>
-          <Route element={<Layout />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/about" element={<AboutUs />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route path="/filter" element={<FilteringPage />} />
-            <Route path="/basic-operations" element={<BasicOperationsPage />} />
-            <Route path="/chart" element={<ChartsPage />} />
-            <Route path="/summary" element={<SummaryPage />} />
-            <Route path="/data-cleaning" element={<DataCleaningPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<Layout />}>
+              <Route path="/home" element={<Home />} />
+              <Route path="/about" element={<AboutUs />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/filter" element={<FilteringPage />} />
+              <Route path="/basic-operations" element={<BasicOperationsPage />} />
+              <Route path="/chart" element={<ChartsPage />} />
+              <Route path="/summary" element={<SummaryPage />} />
+              <Route path="/data-cleaning" element={<DataCleaningPage />} />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </Suspense>
     </Router>
   );
 }

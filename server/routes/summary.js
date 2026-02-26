@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
+import verifyToken from "../middleware/authMiddleware.js";
 
 dotenv.config();
 
@@ -8,9 +9,45 @@ const router = express.Router();
 
 const HUGGINGFACE_API_TOKEN = process.env.HUGGINGFACE_API_TOKEN;
 const MODEL = "mistralai/Mixtral-8x7B-Instruct-v0.1";
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;
+const RATE_LIMIT_MAX_REQUESTS = 10;
+const MAX_SUMMARY_PAYLOAD_BYTES = 1024 * 1024;
+const summaryRequestTracker = new Map();
 
-router.post("/", async (req, res) => {
+const summaryRateLimit = (req, res, next) => {
+  const key = req.user?.userId || req.ip;
+  const now = Date.now();
+  const existing = summaryRequestTracker.get(key);
+
+  if (!existing || now > existing.resetAt) {
+    summaryRequestTracker.set(key, {
+      count: 1,
+      resetAt: now + RATE_LIMIT_WINDOW_MS,
+    });
+    return next();
+  }
+
+  if (existing.count >= RATE_LIMIT_MAX_REQUESTS) {
+    return res
+      .status(429)
+      .json({ message: "Too many summary requests. Please try again in a minute." });
+  }
+
+  existing.count += 1;
+  return next();
+};
+
+router.post("/", verifyToken, summaryRateLimit, async (req, res) => {
   const { rows, columns, columnNames, fullData } = req.body;
+
+  const payloadSize = Buffer.byteLength(JSON.stringify(req.body || {}), "utf8");
+  if (payloadSize > MAX_SUMMARY_PAYLOAD_BYTES) {
+    return res.status(413).json({ message: "Request payload too large for summary generation." });
+  }
+
+  if (!Array.isArray(columnNames)) {
+    return res.status(400).json({ message: "Invalid summary payload" });
+  }
 
   // Construct prompt for AI
   const inputText = `
