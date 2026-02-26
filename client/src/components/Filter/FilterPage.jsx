@@ -20,7 +20,6 @@ const FilterPage = () => {
   const originalData = useSelector((state) => state.file.originalFileData);
   const filteredData = useSelector((state) => state.file.filteredFileData);
 
-  const [selectedFormat, setSelectedFormat] = useState("CSV");
   const [showDownloadOptions, setShowDownloadOptions] = useState(false);
 
   const [filters, setFilters] = useState([
@@ -53,16 +52,19 @@ const FilterPage = () => {
   };
 
   const applyFilters = () => {
-    if (!filters.length) {
+    const validFilters = filters.filter(
+      (filter) => filter.column && filter.value !== ""
+    );
+
+    if (!validFilters.length) {
       dispatch(setFilteredFileData(originalData));
       return;
     }
 
     let result = [];
 
-    filters.forEach((filter, index) => {
+    validFilters.forEach((filter, index) => {
       const { column, condition, value, logicalOperator } = filter;
-      if (!column || value === "") return;
 
       const filterValue = value.toLowerCase();
 

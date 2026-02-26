@@ -1,12 +1,19 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { generateAISummary } from "../../api";
-import DataTable from "../common/DataTable"; // ✅ Reusable component
+import DataTable from "../common/DataTable";
+import {
+  exportSummaryReportToPDF,
+  exportSummaryReportToWord,
+} from "../../utils/exportSummaryReport";
 
 const Summary = () => {
   const fileData = useSelector((state) => state.file.originalFileData);
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
+  const [exportingWord, setExportingWord] = useState(false);
+  const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const downloadMenuRef = useRef(null);
 
   const getMetadata = (data) => {
     const rows = data.length;
@@ -15,10 +22,9 @@ const Summary = () => {
     const sampleData = data.slice(0, 5);
     return { rows, columns, columnNames, sampleData };
   };
-  // Helper: Get column-wise null percentage, data types, and unique values
   const analyzeColumns = (data) => {
     const totalRows = data.length;
-    const columns = {};
+    const columns = [];
 
     Object.keys(data[0] || {}).forEach((key) => {
       const values = data.map((row) => row[key]);
@@ -26,28 +32,31 @@ const Summary = () => {
       const uniqueValues = new Set(values.filter(Boolean)).size;
 
       const sampleValue = values.find((v) => v !== null && v !== undefined);
+      const parsedDate = Date.parse(String(sampleValue));
       const type =
         typeof sampleValue === "number"
           ? "Number"
           : typeof sampleValue === "boolean"
           ? "Boolean"
-          : Date.parse(sampleValue) && !isNaN(new Date(sampleValue))
+          : sampleValue !== undefined && !Number.isNaN(parsedDate)
           ? "Date"
+          : sampleValue === undefined
+          ? "Unknown"
           : "String";
 
-      columns[key] = {
-        nulls: ((nullCount / totalRows) * 100).toFixed(2),
+      columns.push({
+        column: key,
+        nulls: totalRows > 0 ? ((nullCount / totalRows) * 100).toFixed(2) : "0.00",
         unique: uniqueValues,
         type,
-      };
+      });
     });
 
     return columns;
   };
 
-  // Helper: Get numeric column statistics
   const getNumericStats = (data) => {
-    const numericCols = {};
+    const numericCols = [];
     const isNumeric = (val) => typeof val === "number" && !isNaN(val);
 
     Object.keys(data[0] || {}).forEach((col) => {
@@ -63,21 +72,21 @@ const Summary = () => {
         values.reduce((sum, val) => sum + (val - mean) ** 2, 0) / values.length
       );
 
-      numericCols[col] = {
+      numericCols.push({
+        column: col,
         min,
         max,
         mean: mean.toFixed(2),
         median,
         std: std.toFixed(2),
-      };
+      });
     });
 
     return numericCols;
   };
 
-  // Helper: Get top frequent values for categorical columns
   const getTopCategories = (data, topN = 3) => {
-    const results = {};
+    const results = [];
 
     Object.keys(data[0] || {}).forEach((col) => {
       const values = data.map((row) => row[col]);
@@ -94,7 +103,7 @@ const Summary = () => {
         const sorted = Object.entries(freq)
           .sort((a, b) => b[1] - a[1])
           .slice(0, topN);
-        results[col] = sorted;
+        results.push({ column: col, values: sorted });
       }
     });
 
@@ -190,26 +199,74 @@ const Summary = () => {
     return obj;
   };
 
+  const renderSmartText = (value) => {
+    const text = value?.toString().trim();
+    if (!text) return null;
+
+    const lines = text
+      .replace(/\r\n/g, "\n")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const explicitBullets = lines
+      .filter((line) => /^([-*•]|\d+\.)\s+/.test(line))
+      .map((line) => line.replace(/^([-*•]|\d+\.)\s+/, "").trim())
+      .filter(Boolean);
+
+    if (explicitBullets.length >= 2) {
+      return (
+        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          {explicitBullets.map((item, idx) => (
+            <li key={`${item}-${idx}`}>{item}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    const plainText = lines.join(" ");
+    const sentences = plainText
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(Boolean);
+
+    if (sentences.length >= 4 || plainText.length > 220) {
+      return (
+        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+          {sentences.map((sentence, idx) => (
+            <li key={`${sentence}-${idx}`}>{sentence}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return (
+      <p className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
+        {text}
+      </p>
+    );
+  };
+
   const renderSummaryWithoutData = (text) => {
     if (typeof text === "object" && text !== null) {
       return (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {text.description && (
-            <div>
-              <h3 className="font-semibold">📝 Description:</h3>
-              <p className="whitespace-pre-wrap">{text.description}</p>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Description</h3>
+              {renderSmartText(text.description)}
             </div>
           )}
           {text.insights && (
-            <div>
-              <h3 className="font-semibold">🔍 Key Insights:</h3>
-              <p className="whitespace-pre-wrap">{text.insights}</p>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Key Insights</h3>
+              {renderSmartText(text.insights)}
             </div>
           )}
           {text.suggestions && (
-            <div>
-              <h3 className="font-semibold">💡 Suggestions:</h3>
-              <p className="whitespace-pre-wrap">{text.suggestions}</p>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Suggestions</h3>
+              {renderSmartText(text.suggestions)}
             </div>
           )}
         </div>
@@ -220,95 +277,180 @@ const Summary = () => {
       const json = JSON.parse(text);
       const filteredSummary = removeLargeDataArrays(json, 5);
       return (
-        <div className="overflow-auto max-h-64 p-4 bg-white rounded border border-gray-300">
+        <div className="overflow-auto max-h-64 p-4 bg-white dark:bg-gray-800 rounded border border-gray-300 dark:border-gray-700">
           {syntaxHighlight(filteredSummary)}
         </div>
       );
     } catch {
-      return text
-        ?.toString()
-        .split("\n")
-        .map((line, idx) => (
-          <p key={idx} className="mb-2 whitespace-pre-wrap">
-            {line}
-          </p>
-        ));
+      return renderSmartText(text);
     }
   };
 
-  const columnStats = analyzeColumns(fileData || []);
-  const numericStats = getNumericStats(fileData || []);
-  const topCategories = getTopCategories(fileData || []);
+  const metadata = useMemo(() => getMetadata(fileData || []), [fileData]);
+  const columnStats = useMemo(() => analyzeColumns(fileData || []), [fileData]);
+  const numericStats = useMemo(() => getNumericStats(fileData || []), [fileData]);
+  const topCategories = useMemo(() => getTopCategories(fileData || []), [fileData]);
+
+  const reportFileBaseName = useMemo(() => {
+    const stamp = new Date().toISOString().slice(0, 10);
+    return `summary-report-${stamp}`;
+  }, []);
+
+  const hasReportData = metadata.rows > 0;
+
+  const handleExportPDF = () => {
+    if (!hasReportData) return;
+
+    exportSummaryReportToPDF(
+      {
+        metadata,
+        columnStats,
+        numericStats,
+        topCategories,
+        summary,
+      },
+      `${reportFileBaseName}.pdf`
+    );
+
+    setShowDownloadMenu(false);
+  };
+
+  const handleExportWord = async () => {
+    if (!hasReportData || exportingWord) return;
+
+    try {
+      setExportingWord(true);
+      await exportSummaryReportToWord(
+        {
+          metadata,
+          columnStats,
+          numericStats,
+          topCategories,
+          summary,
+        },
+        `${reportFileBaseName}.docx`
+      );
+      setShowDownloadMenu(false);
+    } catch (error) {
+      console.error("Word export failed", error);
+    } finally {
+      setExportingWord(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (!downloadMenuRef.current?.contains(event.target)) {
+        setShowDownloadMenu(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-semibold mb-4">
-        📄 AI-Powered Data Summary
-      </h2>
+    <div className="space-y-6">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-800 dark:text-gray-100">
+              AI-Powered Data Summary
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
+              Explore structure, quality, key stats, and generated insights for your uploaded dataset.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleGenerateSummary}
+              disabled={loading || !fileData?.length}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Generating..." : "Generate AI Summary"}
+            </button>
 
-      <button
-        onClick={handleGenerateSummary}
-        disabled={loading}
-        className="mb-6 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-      >
-        {loading ? "Generating..." : "Generate AI Summary"}
-      </button>
-      {fileData && fileData.length > 0 ? (
-        <div className="w-full">
-          <DataTable
-            data={fileData}
-            title="📊 Uploaded Data"
-            maxRows={12}
-            highlight
-          />
-        </div>
-      ) : (
-        <p className="mb-6">No data to display in the table.</p>
-      )}
-      {Object.keys(columnStats).length > 0 && (
-        <div className="mb-6">
-          <h3 className="font-semibold mb-2">📌 Column Overview</h3>
-          <div className="overflow-auto">
-            <table className="min-w-full text-sm border">
-              <tbody>
-                {Object.entries(columnStats).map(([col, stat]) => (
-                  <tr key={col}>
-                    <td className="p-2 border">{col}</td>
-                    <td className="p-2 border">{stat.type}</td>
-                    <td className="p-2 border">{stat.nulls}</td>
-                    <td className="p-2 border">{stat.unique}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="relative" ref={downloadMenuRef}>
+              <button
+                type="button"
+                onClick={() => hasReportData && setShowDownloadMenu((prev) => !prev)}
+                disabled={!hasReportData || exportingWord}
+                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {exportingWord ? "Preparing Word..." : "Download Report ▾"}
+              </button>
+
+              {showDownloadMenu && (
+                <div className="absolute right-0 mt-2 min-w-[180px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Download as PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportWord}
+                    disabled={exportingWord}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                  >
+                    Download as Word
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-5">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Rows</p>
+            <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{metadata.rows}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Columns</p>
+            <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{metadata.columns}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Numeric Columns</p>
+            <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{numericStats.length}</p>
+          </div>
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+            <p className="text-xs uppercase text-gray-500 dark:text-gray-400">Categorical Columns</p>
+            <p className="text-xl font-bold text-gray-800 dark:text-gray-100">{topCategories.length}</p>
+          </div>
+        </div>
+      </div>
+
+      {fileData && fileData.length > 0 ? (
+        <DataTable data={fileData} title="Uploaded Data Preview" pageSize={12} />
+      ) : (
+        <div className="rounded-lg border border-yellow-200 bg-yellow-50 text-yellow-700 px-4 py-3 text-sm">
+          No data available. Upload and parse a file first to see summary insights.
+        </div>
       )}
 
-      {Object.keys(numericStats).length > 0 && (
-        <div className="mb-6">
-          <h3 className="font-semibold mb-2">📈 Numeric Column Stats</h3>
+      {columnStats.length > 0 && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Column Overview</h3>
           <div className="overflow-auto">
-            <table className="min-w-full text-sm border">
-              <thead className="bg-gray-200">
+            <table className="min-w-full text-sm border border-gray-200 dark:border-gray-700">
+              <thead className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200">
                 <tr>
-                  <th className="p-2 border">Column</th>
-                  <th className="p-2 border">Min</th>
-                  <th className="p-2 border">Max</th>
-                  <th className="p-2 border">Mean</th>
-                  <th className="p-2 border">Median</th>
-                  <th className="p-2 border">Std Dev</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Column</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Type</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Null %</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Unique</th>
                 </tr>
               </thead>
               <tbody>
-                {Object.entries(numericStats).map(([col, stat]) => (
-                  <tr key={col}>
-                    <td className="p-2 border">{col}</td>
-                    <td className="p-2 border">{stat.min}</td>
-                    <td className="p-2 border">{stat.max}</td>
-                    <td className="p-2 border">{stat.mean}</td>
-                    <td className="p-2 border">{stat.median}</td>
-                    <td className="p-2 border">{stat.std}</td>
+                {columnStats.map((stat) => (
+                  <tr key={stat.column} className="text-gray-700 dark:text-gray-300">
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.column}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.type}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.nulls}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.unique}</td>
                   </tr>
                 ))}
               </tbody>
@@ -316,15 +458,51 @@ const Summary = () => {
           </div>
         </div>
       )}
-      {Object.keys(topCategories).length > 0 && (
-        <div className="mb-6">
-          <h3 className="font-semibold mb-2">🔠 Frequent Values</h3>
+
+      {numericStats.length > 0 && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Numeric Column Stats</h3>
+          <div className="overflow-auto">
+            <table className="min-w-full text-sm border border-gray-200 dark:border-gray-700">
+              <thead className="bg-gray-100 dark:bg-gray-800">
+                <tr>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Column</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Min</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Max</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Mean</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Median</th>
+                  <th className="p-2 border border-gray-200 dark:border-gray-700 text-left">Std Dev</th>
+                </tr>
+              </thead>
+              <tbody>
+                {numericStats.map((stat) => (
+                  <tr key={stat.column} className="text-gray-700 dark:text-gray-300">
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.column}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.min}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.max}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.mean}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.median}</td>
+                    <td className="p-2 border border-gray-200 dark:border-gray-700">{stat.std}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {topCategories.length > 0 && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Frequent Values</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {Object.entries(topCategories).map(([col, values]) => (
-              <div key={col} className="bg-white border p-4 rounded shadow">
-                <h4 className="font-semibold mb-2">{col}</h4>
-                <ul className="list-disc list-inside text-sm">
-                  {values.map(([val, count]) => (
+            {topCategories.map((category) => (
+              <div
+                key={category.column}
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-4 rounded"
+              >
+                <h4 className="font-semibold mb-2 text-gray-800 dark:text-gray-100">{category.column}</h4>
+                <ul className="list-disc list-inside text-sm text-gray-700 dark:text-gray-300">
+                  {category.values.map(([val, count]) => (
                     <li key={val}>
                       {val} — {count} occurrences
                     </li>
@@ -337,9 +515,10 @@ const Summary = () => {
       )}
 
       {summary && (
-        <div className="bg-gray-100 p-6 rounded-md min-h-[150px] border border-gray-300">
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-5 min-h-[140px]">
+          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Generated Summary</h3>
           {loading ? (
-            <p>Loading summary...</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300">Loading summary...</p>
           ) : (
             renderSummaryWithoutData(summary)
           )}

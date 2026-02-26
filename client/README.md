@@ -1,12 +1,79 @@
-# React + Vite
+# FilterExcel Client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend application for the FilterExcel project (Final Year Project), built with React + Vite.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 19
+- Vite 6
+- Redux Toolkit
+- React Router
+- Recharts
+- Tailwind CSS
 
-## Expanding the ESLint configuration
+## Key Features
 
-If you are developing a production application, we recommend using TypeScript and enable type-aware lint rules. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- Upload and preview tabular data files.
+- Filter, sort, clean, and transform data using UI tools.
+- Generate AI-powered dataset summaries.
+- Visualize data using line, bar, pie, area, and scatter charts.
+- Export summary reports from the Summary page in:
+	- PDF (`.pdf`)
+	- Word (`.docx`)
+
+## Summary Report Export
+
+From the **Summary** page:
+
+1. Click **Generate AI Summary** (optional but recommended).
+2. Click **Download Report ▾**.
+3. Choose:
+	 - **Download as PDF**
+	 - **Download as Word**
+
+The report includes:
+
+- Dataset overview
+- Column overview
+- Numeric statistics
+- Frequent categorical values
+- Generated AI summary content
+
+## Environment Setup
+
+Create a `.env` file in `client/` (or use existing project env config):
+
+```env
+VITE_API_BASE_URL=http://localhost:5000
+```
+
+## Install and Run
+
+```bash
+npm install
+npm run dev
+```
+
+Default Vite dev URL:
+
+```text
+http://localhost:5173
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+## Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Create production build
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint
+
+## Notes
+
+- Backend server must be running for API-backed features (auth, AI summary, file operations).
+- Large production chunk warnings may appear during build; current functionality is unaffected.

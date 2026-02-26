@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   FaSearch,
@@ -45,11 +45,15 @@ const BasicOperationPanel = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
-  const totalPages = Math.ceil(filteredFileData.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredFileData.length / rowsPerPage));
   const paginatedData = filteredFileData.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
 
   const handleSort = (order) => {
     if (selectedColumn) {
@@ -59,12 +63,14 @@ const BasicOperationPanel = () => {
 
   const handleSearch = (term) => {
     setSearchTerm(term);
+    setCurrentPage(1);
     dispatch(filterBySearchTerm(term));
   };
 
   const handleReset = () => {
     setSelectedColumn("");
     setSearchTerm("");
+    setCurrentPage(1);
     dispatch(resetFilteredData());
   };
 

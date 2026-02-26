@@ -26,9 +26,22 @@ export const exportToJSON = (data, fileName = "export.json") => {
 
 // Helper function to convert data to CSV format
 const convertToCSV = (data) => {
-  const headers = Object.keys(data[0]);
-  const rows = data.map((row) =>
-    headers.map((header) => `"${row[header]}"`).join(",")
+  if (!Array.isArray(data) || data.length === 0) {
+    return "";
+  }
+
+  const headers = Array.from(
+    new Set(data.flatMap((row) => Object.keys(row || {})))
   );
+
+  const escapeCsvValue = (value) => {
+    const stringValue = String(value ?? "");
+    return `"${stringValue.replace(/"/g, '""')}"`;
+  };
+
+  const rows = data.map((row) =>
+    headers.map((header) => escapeCsvValue(row?.[header])).join(",")
+  );
+
   return [headers.join(","), ...rows].join("\n");
 };
